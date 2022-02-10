@@ -44,13 +44,20 @@ for agent in agents:
     if working_times:
         for working_time in working_times:
             if datetime.datetime.now(timezone(time_zone)).weekday() == working_time['day']:
-                time_now = datetime.datetime.now(timezone(time_zone)).strftime("%H:%M:%S")
-                if working_time['not_before'] <= time_now <= working_time['not_after']:
+                time_begin_work_obj = datetime.datetime.strptime(working_time['not_before'], '%H:%M:%S').time()
+                time_end_work_obj = datetime.datetime.strptime(working_time['not_after'], '%H:%M:%S').time()
+                datetime_now_obj = datetime.datetime.now(timezone(time_zone))
+                time_now_obj = datetime_now_obj.time()
+                datetime_now_str = datetime.datetime.now(timezone(time_zone)).strftime("%H:%M:%S")
+                datetime_begin_work_obj = datetime.datetime(year=datetime_now_obj.year, month=datetime_now_obj.month, day=datetime_now_obj.day,
+                                                    hour=time_begin_work_obj.hour, minute=time_begin_work_obj.minute,
+                                                    second=time_begin_work_obj.second)
+                if time_begin_work_obj <= time_now_obj <= time_end_work_obj:
                     hour_offset = (datetime.datetime.now(timezone(time_zone)) - datetime.timedelta(hours=datetime.datetime.now().hour)).hour
                     if not is_begin_work[agent['agent_uuid']]:
                         r = requests.post('https://api-v3.neuro.net/api/v2/ext/statistic/dialog-report',
                                           json={"agent_uuid": agent['agent_uuid'],
-                                                "start": (working_time['not_before'] - datetime.timedelta(hours=(
+                                                "start": (datetime_begin_work_obj - datetime.timedelta(hours=(
                                                             3 + hour_offset))).strftime("%Y-%m-%d %H:%M:%S"),
                                                 "end": (datetime.datetime.now(timezone(time_zone)) - datetime.timedelta(
                                                     hours=(3 + hour_offset))).strftime("%Y-%m-%d %H:%M:%S")},
@@ -74,6 +81,8 @@ for agent in agents:
                             #pass
                             send_message(f"Обзвон {agent['name']} идет!")
                         break
+                    else:
+                        send_message(f"{agent['name']} не начинал работу!")
     else:
         #send_message(f"Робот {agent['name']} не работает")
         pass
